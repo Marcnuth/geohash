@@ -37,10 +37,7 @@ def decode(geohash):
     return latitude_range, longitude_range
 
 
-def encode(latitude, longitude, precision=12):
-    """
-    precision: 5 bits for 1 precision, according to https://en.wikipedia.org/wiki/Geohash
-    """
+def encode2bin(latitude, longitude, length=8):
     def __encode(data, data_range):
         mid = np.average([data_range.min, data_range.max])
         flag_in_right = (data >= mid)
@@ -50,13 +47,20 @@ def encode(latitude, longitude, precision=12):
     latitude_range, longitude_range = LATITUDE_RANGE, LONGITUDE_RANGE
     bits = list()
 
-    # 1. calculate the bits
-    for _ in range(math.ceil(precision * PRECISION_TO_BITS_TIMES / 2)):
+    for _ in range(math.ceil(length / 2)):
         bit_lng, longitude_range = __encode(longitude, longitude_range)
         bit_lat, latitude_range = __encode(latitude, latitude_range)
         bits.extend([bit_lng, bit_lat])
+    return bits
 
-    # 2. encode bits to hash string
+
+def encode(latitude, longitude, precision=12):
+    """
+    precision: 5 bits for 1 precision, according to https://en.wikipedia.org/wiki/Geohash
+    """
+
+    bits = encode2bin(latitude, longitude, length=precision * PRECISION_TO_BITS_TIMES)
+
     chunks = np.split(np.array(bits[:precision * PRECISION_TO_BITS_TIMES]), precision)
     pad_shape = ((0, 0), (8 - PRECISION_TO_BITS_TIMES, 0))
     chunks = np.packbits(np.pad(chunks, pad_shape, 'constant').astype(int), axis=1).flatten()
